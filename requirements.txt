@@ -1,0 +1,5 @@
+# Dependencies for the GitHub CLI extension to add enterprise members to an organization
+
+gh==2.0.0
+graphqlclient==0.2.4
+jq==0.1.6
