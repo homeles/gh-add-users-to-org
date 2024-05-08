@@ -8,7 +8,8 @@ This GitHub CLI extension is designed to automate the process of adding all ente
 
 To use this extension, you must have the GitHub CLI installed on your machine. Once you have the GitHub CLI installed, follow these steps:
 
-1. gh extension install 
+1. `gh extension install homeles/gh-add-users-to-org`
+2. `gh extension install https://github.com/homeles/gh-add-users-to-org`
 
 ### Required Parameters
 
@@ -22,6 +23,11 @@ To add all enterprise members not already in the predefined organization, execut
 ```bash
 gh add-users-to-org -o ORG_NAME -e ENTERPRISE_NAME
 ```
+Example:
+```
+gh add-users-to-org -o innersource -e github
+```
+__Note:__ if you are using GitHub Enterprise Server, the enterprise name is `github`, otherwise use your own enterprise name
 
 Ensure you have set the required parameters in the script before running it.
 
