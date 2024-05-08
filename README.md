@@ -8,15 +8,12 @@ This GitHub CLI extension is designed to automate the process of adding all ente
 
 To use this extension, you must have the GitHub CLI installed on your machine. Once you have the GitHub CLI installed, follow these steps:
 
-1. Clone this repository to your local machine.
-2. Navigate to the cloned repository directory.
-3. Run the script `src/gh-add-users-org.sh` with the necessary parameters.
+1. gh extension install 
 
 ### Required Parameters
 
 - `ORG_NAME`: The name of the organization you want to add members to.
 - `ENTERPRISE_NAME`: The name of your enterprise.
-- `GITHUB_TOKEN`: Your GitHub personal access token with the necessary permissions.
 
 ### Command
 
