@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# This script adds all enterprise members not already in a predefined organization using GitHub CLI and GraphQL API
+
+# Define variables
+ORG_NAME=""
+ENTERPRISE_NAME=""
+
+# Parse command line options
+while getopts o:e: flag
+do
+    case "${flag}" in
+        o) ORG_NAME=${OPTARG};;
+        e) ENTERPRISE_NAME=${OPTARG};;
+    esac
+done
+
+# Check if the required options are provided
+if [ -z "$ORG_NAME" ] || [ -z "$ENTERPRISE_NAME" ]; then
+    echo "Usage: $0 -o ORG_NAME -e ENTERPRISE_NAME"
+    exit 1
+fi
+
+# Initialize cursor and members array
+CURSOR=""
+MEMBERS=()
+
+# Fetch all enterprise members
+echo "Fetch all enterprise members"
+while : ; do
+  QUERY='
+    query($enterprise: String!, $cursor: String) {
+      enterprise(slug: $enterprise) {
+        members(first: 100, after: $cursor) {
+          pageInfo {
+            endCursor
+            hasNextPage
+          }
+          nodes {
+            ... on User {
+              login
+            }
+          }
+        }
+      }
+    }'
+  if [ -z "$CURSOR" ]; then
+    DATA=$(gh api graphql -f query="$QUERY" -f enterprise="$ENTERPRISE_NAME")
+    echo "  First page.."
+  else
+    DATA=$(gh api graphql -f query="$QUERY" -f enterprise="$ENTERPRISE_NAME" -f cursor="$CURSOR")
+    echo "  Next page.."
+  fi
+
+  MEMBERS+=($(echo "$DATA" | jq -r '.data.enterprise.members.nodes[].login'))
+  HAS_NEXT_PAGE=$(echo "$DATA" | jq -r '.data.enterprise.members.pageInfo.hasNextPage')
+  CURSOR=$(echo "$DATA" | jq -r '.data.enterprise.members.pageInfo.endCursor')
+
+  # Break the loop if there are no more pages
+  if [ "$HAS_NEXT_PAGE" = "false" ]; then
+    echo "All enterprise members fetched."
+    break
+  fi
+done
+
+# Loop through each member
+for MEMBER in "${MEMBERS[@]}"; do
+  # Check if the member is already part of the organization
+  if ! gh api orgs/$ORG_NAME/members/$MEMBER >/dev/null 2>&1; then
+    # Add member to the organization
+    gh api -X PUT orgs/$ORG_NAME/memberships/$MEMBER -f role="member" >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      echo "$MEMBER added to $ORG_NAME successfully."
+    else
+      echo "Failed to add $MEMBER to $ORG_NAME."
+    fi
+  else
+    echo "$MEMBER is already part of $ORG_NAME."
+  fi
+done

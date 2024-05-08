@@ -23,7 +23,7 @@ To use this extension, you must have the GitHub CLI installed on your machine. O
 To add all enterprise members not already in the predefined organization, execute the following command:
 
 ```bash
-./src/gh-add-users-org.sh
+gh add-users-to-org -o ORG_NAME -e ENTERPRISE_NAME
 ```
 
 Ensure you have set the required parameters in the script before running it.
