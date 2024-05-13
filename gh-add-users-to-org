@@ -9,17 +9,18 @@ if ! command -v jq &> /dev/null; then
 fi
 
 # Parse command line options
-while getopts o:e: flag
+while getopts o:e:s: flag
 do
     case "${flag}" in
         o) ORG_NAME=${OPTARG};;
         e) ENTERPRISE_NAME=${OPTARG};;
+        s) SKIP_PATTERN=${OPTARG};;
     esac
 done
 
 # Check if the required options are provided
 if [ -z "$ORG_NAME" ] || [ -z "$ENTERPRISE_NAME" ]; then
-    echo "Usage: $0 -o ORG_NAME -e ENTERPRISE_NAME"
+    echo "Usage: $0 -o ORG_NAME -e ENTERPRISE_NAME [-s SKIP_PATTERN]"
     exit 1
 fi
 
@@ -28,7 +29,6 @@ CURSOR=""
 MEMBERS=()
 
 # Fetch all enterprise members
-echo "Fetch all enterprise members"
 while : ; do
   QUERY='
     query($enterprise: String!, $cursor: String) {
@@ -48,10 +48,8 @@ while : ; do
     }'
   if [ -z "$CURSOR" ]; then
     DATA=$(gh api graphql -f query="$QUERY" -f enterprise="$ENTERPRISE_NAME")
-    echo "  First page.."
   else
     DATA=$(gh api graphql -f query="$QUERY" -f enterprise="$ENTERPRISE_NAME" -f cursor="$CURSOR")
-    echo "  Next page.."
   fi
 
   MEMBERS+=($(echo "$DATA" | jq -r '.data.enterprise.members.nodes[].login'))
@@ -60,13 +58,18 @@ while : ; do
 
   # Break the loop if there are no more pages
   if [ "$HAS_NEXT_PAGE" = "false" ]; then
-    echo "All enterprise members fetched."
     break
   fi
 done
 
 # Loop through each member
 for MEMBER in "${MEMBERS[@]}"; do
+  # Skip member if it matches the skip pattern
+  if [[ "$MEMBER" =~ $SKIP_PATTERN ]]; then
+    echo "$MEMBER skipped due to matching skip pattern."
+    continue
+  fi
+
   # Check if the member is already part of the organization
   if ! gh api orgs/$ORG_NAME/members/$MEMBER >/dev/null 2>&1; then
     # Add member to the organization
@@ -76,7 +79,5 @@ for MEMBER in "${MEMBERS[@]}"; do
     else
       echo "Failed to add $MEMBER to $ORG_NAME."
     fi
-  else
-    echo "$MEMBER is already part of $ORG_NAME."
   fi
 done
